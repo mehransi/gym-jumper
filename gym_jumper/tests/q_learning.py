@@ -1,20 +1,24 @@
 import gym
 import gym_jumper
 import time
+from gym_jumper.rl_algorithms import QLearningAgent
 
 
 def run_env():
     env = gym.make('Jumper-v0')
+    agent = QLearningAgent(env, file_path="./ql.json", epsilon=0)
+    # agent.learn()
+
     state = env.reset()
-    print(state)
     for _ in range(1000):
-        action = env.action_space.sample()
+        action = agent.select_action(state)
+        print(action)
         state, reward, done, info = env.step(action)  # take a random action
         if done:
             env.reset()
         env.render()
         time.sleep(0.03)
-        print(action, state, reward, done)
+        print(state, reward, done)
     env.close()
 
 

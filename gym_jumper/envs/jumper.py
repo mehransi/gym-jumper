@@ -1,3 +1,5 @@
+import random
+
 import gym
 from gym import spaces, logger
 from gym.utils import seeding
@@ -15,6 +17,7 @@ class JumperEnv(gym.Env):
         Num     Observation               Min                     Max
         0       Ball Position             0                       100
         1       Ball Velocity             -Inf                    Inf
+        2       Force applied to ball     -Inf                    Inf
 
     Actions:
         Type: Discrete(2)
@@ -23,15 +26,15 @@ class JumperEnv(gym.Env):
         1     Push cart to the up
 
     Reward:
-        Reward is +1 for no collision, -10 for collision
+        Reward is 0.1 for no collision, -10 for collision
 
     Starting State:
-        Ball position: 50
-        Ball velocity: 0
+        Ball position: random between 10 and 90
+        Ball velocity: random between -5 and +5
+        Ball force: random between -5 and +5
 
     Episode Termination:
         Ball collision with ground or roof.
-        Episode length is greater than 200.
     """
 
     metadata = {
@@ -42,17 +45,14 @@ class JumperEnv(gym.Env):
     def __init__(self, **kwargs):
         self.gravity = 9.8
         self.ball_mass = .2  # kg
-        self.force_mag = kwargs.get("force_mag", 2.5)
+        self.force_mag = 15
         self.tau = 0.1  # seconds between state updates
         self.ground_y = 0
         self.roof_y = 100
         self.ball_radius = kwargs.get("ball_radius", 2.5)
 
-        self.starting_position = kwargs.get("starting_position", 50)
-        self.starting_velocity = kwargs.get("starting_velocity", 0)
-
-        low = np.array([self.ground_y, -np.finfo(np.float32).max], dtype=np.float32)
-        high = np.array([self.roof_y, np.finfo(np.float32).max], dtype=np.float32)
+        low = np.array([self.ground_y, -np.finfo(np.float32).max, -np.finfo(np.float32).max], dtype=np.float32)
+        high = np.array([self.roof_y, np.finfo(np.float32).max, np.finfo(np.float32).max], dtype=np.float32)
 
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
@@ -70,14 +70,14 @@ class JumperEnv(gym.Env):
     def step(self, action):
         err_msg = "%r (%s) invalid" % (action, type(action))
         assert self.action_space.contains(action), err_msg
-        position, velocity = self.state
-        force = self.force_mag if action == 1 else 0
-        force = force + (-self.gravity * self.ball_mass)
+        position, velocity, force = self.state
+        force_mag = self.force_mag if action == 1 else 0
         #  Fixme: not physically correct
+        force += force_mag + (-self.gravity * self.ball_mass)
         velocity += (force/self.ball_mass) * self.tau
         position += velocity * self.tau
 
-        self.state = [position / 100 * 100, velocity / 100 * 100]
+        self.state = [round(position), round(velocity) // 5 * 5, round(force) // 5 * 5]
 
         done = bool(
             position <= self.ground_y + self.ball_radius or
@@ -85,9 +85,11 @@ class JumperEnv(gym.Env):
         )
 
         if not done:
-            reward = 1.0
+            difference_to_middle = round(abs(position - (self.roof_y - self.ground_y) / 2))
+            if difference_to_middle == 0:
+                difference_to_middle = 1
+            reward = 1 / difference_to_middle
         elif self.steps_beyond_done is None:
-            # Pole just fell!
             self.steps_beyond_done = 0
             reward = -10
         else:
@@ -104,7 +106,7 @@ class JumperEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self):
-        self.state = [self.starting_position, self.starting_velocity]
+        self.state = [random.randint(10, 90), random.randint(-5, 5), random.randint(-5, 5)]
         self.steps_beyond_done = None
         return np.array(self.state)
 
