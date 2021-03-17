@@ -6,7 +6,7 @@ from gym import Env
 
 
 class QLearningAgent:
-    def __init__(self, env: Env, file_path, epsilon=0.1, alpha=0.4, iterations=10000):
+    def __init__(self, env: Env, file_path, epsilon=0.3, alpha=0.5, iterations=1000000):
         self.env = env
         self.q_values = {}
         self.epsilon = epsilon
@@ -15,7 +15,9 @@ class QLearningAgent:
         self.actions = list(range(self.env.action_space.n))
 
         self.file_path = file_path
+        self.previously_learnt = False
         if os.path.exists(self.file_path):
+            self.previously_learnt = True
             file = open(self.file_path, "r")
             data = json.load(file)
             self.q_values = data
@@ -41,6 +43,9 @@ class QLearningAgent:
         return best_current_action
 
     def learn(self):
+        if self.previously_learnt:
+            print("Previously learnt (file {0}). exit learning.".format(self.file_path))
+
         for iteration in range(self.iterations):
             done = False
             state = self.env.reset()
@@ -58,8 +63,8 @@ class QLearningAgent:
                 if count == 1000:
                     done = True
 
-            if iteration % 10000 == 0:
-                print(iteration, count)
+            if iteration % 1000 == 0:
+                print(f"{iteration=}/{self.iterations}, live_for={count}")
                 self.alpha *= 2/3
             self.epsilon -= self.epsilon / self.iterations
         self.epsilon = 0

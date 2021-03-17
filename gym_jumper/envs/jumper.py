@@ -91,7 +91,7 @@ class JumperEnv(gym.Env):
             reward = 1 / difference_to_middle
         elif self.steps_beyond_done is None:
             self.steps_beyond_done = 0
-            reward = -10
+            reward = -1
         else:
             if self.steps_beyond_done == 0:
                 logger.warn(
@@ -106,7 +106,7 @@ class JumperEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self):
-        self.state = [random.randint(10, 90), random.randint(-5, 5), random.randint(-5, 5)]
+        self.state = [random.randint(20, 80)//5*5, random.randint(-2, 2), random.randint(-2, 2)]
         self.steps_beyond_done = None
         return np.array(self.state)
 

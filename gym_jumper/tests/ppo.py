@@ -1,4 +1,3 @@
-import os
 import gym
 import gym_jumper
 import time
