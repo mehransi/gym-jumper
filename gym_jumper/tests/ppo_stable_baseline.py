@@ -13,7 +13,7 @@ def run_env():
     for _ in range(1000):
         action, _states = agent.predict(state, deterministic=True)
         print(action)
-        state, reward, done, info = env.step(action)  # take a random action
+        state, reward, done, info = env.step(action)
         if done:
             env.reset()
         env.render()

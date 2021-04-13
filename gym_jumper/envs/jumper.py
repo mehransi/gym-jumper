@@ -42,17 +42,20 @@ class JumperEnv(gym.Env):
         'video.frames_per_second': 50
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, config=None):
+        if config is None:
+            config = {}
+        self.config = config
         self.gravity = 9.8
         self.ball_mass = .2  # kg
         self.force_mag = 15
         self.tau = 0.1  # seconds between state updates
         self.ground_y = 0
         self.roof_y = 100
-        self.ball_radius = kwargs.get("ball_radius", 2.5)
+        self.ball_radius = self.config.get("ball_radius", 2.5)
 
-        low = np.array([self.ground_y, -np.finfo(np.float32).max, -np.finfo(np.float32).max], dtype=np.float32)
-        high = np.array([self.roof_y, np.finfo(np.float32).max, np.finfo(np.float32).max], dtype=np.float32)
+        low = np.array([self.ground_y, -100, -50], dtype=np.float32)
+        high = np.array([self.roof_y, 100, 50], dtype=np.float32)
 
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
@@ -77,12 +80,28 @@ class JumperEnv(gym.Env):
         velocity += (force/self.ball_mass) * self.tau
         position += velocity * self.tau
 
-        self.state = [round(position), round(velocity) // 5 * 5, round(force) // 5 * 5]
+        force = round(force) // 5 * 5
+        if force >= 50:
+            force = 49
+        elif force <= -50:
+            force = -49
+
+        velocity = round(velocity) // 5 * 5
+        if velocity >= 100:
+            velocity = 99
+        elif velocity <= -100:
+            velocity = -99
+        self.state = [round(position), velocity, force]
 
         done = bool(
             position <= self.ground_y + self.ball_radius or
             position >= self.roof_y - self.ball_radius
         )
+
+        if position < self.ground_y:
+            self.state[0] = self.ground_y
+        elif position > self.roof_y:
+            self.state[0] = self.roof_y
 
         if not done:
             difference_to_middle = round(abs(position - (self.roof_y - self.ground_y) / 2))
